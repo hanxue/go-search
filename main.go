@@ -36,20 +36,24 @@ func main() {
 		results, err := googleResultParser(res)
 		if err != nil {
 			log.Fatal(err)
-		} else {
-			for i, v := range results {
-				r, err := regexp.Compile(`.*\://?([^\/]+)`)
-				if err != nil {
-					fmt.Printf("There is a problem with your regexp.\n")
-					os.Exit(1)
-				}
-				domain := r.FindAllStringSubmatch(v.ResultURL, -1)[0][1]
-				fmt.Println(a.Cyan(" ("+strconv.Itoa(i)+")"),
-					a.Brown("["+domain+"]"), a.Green(v.ResultTitle))
-				fmt.Println(v.ResultDesc)
-			}
-
+			os.Exit(1)
 		}
+		if len(results) == 0 {
+			fmt.Println("No results.")
+			os.Exit(0)
+		}
+		for i, v := range results {
+			r, err := regexp.Compile(`.*\://?([^\/]+)`)
+			if err != nil {
+				fmt.Printf("There is a problem with your regexp.\n")
+				os.Exit(1)
+			}
+			domain := r.FindAllStringSubmatch(v.ResultURL, -1)[0][1]
+			fmt.Println(a.Cyan(" ("+strconv.Itoa(i)+")"),
+				a.Brown("["+domain+"]"), a.Green(v.ResultTitle))
+			fmt.Println(v.ResultDesc)
+		}
+
 		return nil
 	}
 
