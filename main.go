@@ -5,9 +5,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	a "github.com/logrusorgru/aurora"
 	"github.com/urfave/cli"
 )
 
@@ -25,16 +28,27 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 		query := c.Args().Get(0)
-		googleURL := buildGoogleURL(query)
+		googleURL := buildGoogleURL(query, "en")
 		res, err := googleRequest(googleURL)
 		if err != nil {
 			log.Fatal(err)
 		}
-		scrapes, err := googleResultParser(res)
+		results, err := googleResultParser(res)
 		if err != nil {
 			log.Fatal(err)
 		} else {
-			fmt.Printf("Result %q", scrapes)
+			for i, v := range results {
+				r, err := regexp.Compile(`.*\://?([^\/]+)`)
+				if err != nil {
+					fmt.Printf("There is a problem with your regexp.\n")
+					os.Exit(1)
+				}
+				domain := r.FindAllStringSubmatch(v.ResultURL, -1)[0][1]
+				fmt.Println(a.Cyan(" ("+strconv.Itoa(i)+")"),
+					a.Brown("["+domain+"]"), a.Green(v.ResultTitle))
+				fmt.Println(v.ResultDesc)
+			}
+
 		}
 		return nil
 	}
@@ -46,10 +60,10 @@ func main() {
 }
 
 // Taken from https://gist.github.com/EdmundMartin/eaea4aaa5d231078cb433b89878dbecf
-func buildGoogleURL(searchTerm string) string {
+func buildGoogleURL(searchTerm string, languageCode string) string {
 	searchTerm = strings.Trim(searchTerm, " ")
 	searchTerm = strings.Replace(searchTerm, " ", "+", -1)
-	return fmt.Sprintf("%s%s&num=100&hl=%s", "https://www.google.com/search?q=", searchTerm)
+	return fmt.Sprintf("https://www.google.com/search?q=%s&num=10&hl=%s", searchTerm, languageCode)
 }
 
 func googleRequest(searchURL string) (*http.Response, error) {
@@ -64,9 +78,8 @@ func googleRequest(searchURL string) (*http.Response, error) {
 
 	if err != nil {
 		return nil, err
-	} else {
-		return res, nil
 	}
+	return res, nil
 }
 
 func googleResultParser(response *http.Response) ([]GoogleResult, error) {
